@@ -30,6 +30,42 @@ app.post("/signup", async(req,res)=>{
         res.status(500).send("data not fetched",err.message);
     };
     
+});
+// Feed API - GET /feed - to get all the users to the feed
+
+app.get("/feed", async(req,res)=>{
+    try {
+        const users =  await User.find({});
+        res.send(users);
+    } catch(err) {
+        res.status(404).send("not found");
+    }   
+})
+
+//delete API -delete /user - delete an entry
+app.delete("/user",async(req,res)=>{
+    const input = req.body.firstName;
+    console.log(input);
+    try {       
+        await User.deleteOne({firstName:input});
+        res.send("item deleted");
+    }catch(err) {
+        res.status(400).send("something went wrong");
+    }
+    
+}) 
+
+//update API - update /user-update an user
+app.patch("/user",async(req,res)=>{
+    const userId = req.body._id;
+    const data = req.body;
+    console.log(userId);
+    try{
+        await User.findByIdAndUpdate({_id:userId},data);
+        res.send("item updated");
+    }catch(err) {
+        res.status(400).send("something went wrong");
+    }
 })
 
 // const {auth} = require("./auth.js")
