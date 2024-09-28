@@ -1,84 +1,119 @@
 const express = require("express");
-const {dbConnect}=require("./config/database");
+const { dbConnect } = require("./config/database");
 const User = require("./models/user");
+const { validateSignupData } = require("./utils/validation");
+const bcrypt = require("bcrypt");
 const app = express();
-dbConnect().then(()=>{
+dbConnect()
+  .then(() => {
     console.log("db is connected ");
-    app.listen(9999,()=>{
-        console.log("Our server running");
+    app.listen(9999, () => {
+      console.log("Our server running");
     });
-}
-   
-).catch((err)=>{
-    console.log(err,"db is  not connected ");
-}) ;
+  })
+  .catch((err) => {
+    console.log(err, "db is  not connected ");
+  });
 app.use(express.json());
-app.post("/signup", async(req,res)=>{
+app.post("/signup", async (req, res) => {
+  // const userMock ={
+  //     "firstName":"Anik",
+  //     "lastName":"Barui",
+  //     "email":"Anik@gmail.com",
+  //     "password":"anik123"
+  // };
 
-    // const userMock ={
-    //     "firstName":"Anik",
-    //     "lastName":"Barui",
-    //     "email":"Anik@gmail.com",
-    //     "password":"anik123"
-    // };
-    const userMock = req.body;
-    const user = new User(userMock);
+  try {
+    //validation of data
+    validateSignupData(req);
+     const {firstName,lastName,email,password} = req.body;
+    //const userMock = req.body;
+    //Encrypt the password
+     const passHash = await bcrypt.hash(password,10);
+    const user = new User({
+        firstName,
+        lastName,
+        email,
+        password:passHash
+    });
+    await user.save();
+    res.send("data saved successfully");
+  } catch (err) {
+    res.status(500).send("ERROR:"+ err.message);
+  }
+});
+// Login API- POST /login - to login in the account
+app.post("/login",async(req,res)=>{
     try{
-        await user.save();
-        res.send("data saved successfully");
-    }catch(err){
-        res.status(500).send(err.message);
-    };
-    
+        const {email,password} = req.body;
+        const user = await User.findOne({email:email});
+        if(!user) {
+            throw new Error("Invalid credentials");
+        }
+        const pass = await bcrypt.compare(password,user.password);
+        if(!pass) {
+            throw new Error("Invalid credentials");
+        }else{
+            res.status(200).send("Login successfully");
+        }
+    }catch (err) {
+        res.status(500).send("ERROR:"+ err.message);
+      }
 });
 // Feed API - GET /feed - to get all the users to the feed
 
-app.get("/feed", async(req,res)=>{
-    try {
-        const users =  await User.find({});
-        res.send(users);
-    } catch(err) {
-        res.status(404).send("not found");
-    }   
-})
+app.get("/feed", async (req, res) => {
+  try {
+    const users = await User.find({});
+    res.send(users);
+  } catch (err) {
+    res.status(404).send("not found");
+  }
+});
 
 //delete API -delete /user - delete an entry
-app.delete("/user",async(req,res)=>{
-    const input = req.body.firstName;
-    console.log(input);
-    try {       
-        await User.deleteOne({firstName:input});
-        res.send("item deleted");
-    }catch(err) {
-        res.status(400).send("something went wrong");
-    }
-    
-}) 
+app.delete("/user", async (req, res) => {
+  const input = req.body.firstName;
+  console.log(input);
+  try {
+    await User.deleteOne({ firstName: input });
+    res.send("item deleted");
+  } catch (err) {
+    res.status(400).send("something went wrong");
+  }
+});
 
 //update API - update /user-update an user
-app.patch("/user/:_id",async(req,res)=>{
-    const userId = req.params._id;
-    const data = req.body;    
-    try{
-        const validColumns = [
-            "userId","lastName","password","skills","about","photoURL",
-        ];
-        const isFieldValid = Object.keys(data).every((k)=>{
-            return validColumns.includes(k);
-        });
-        console.log(isFieldValid);
-        if (! isFieldValid){
-            throw new Error("not a valid type to update");
-        }
-        if(data?.skills?.length > 10) {
-            throw new Error("you can not add more than 10 skills");
-        }
-        await User.findByIdAndUpdate({_id:userId},data,{runValidators:true,});
-        res.send("item updated");
-    }catch(err) {
-        res.status(400).send(err.message);
+app.patch("/user/:_id", async (req, res) => {
+  const userId = req.params._id;
+  const data = req.body;
+  try {
+    const validColumns = [
+      "userId",
+      "lastName",
+      "password",
+      "skills",
+      "about",
+      "photoURL",
+    ];
+    const isFieldValid = Object.keys(data).every((k) => {
+      return validColumns.includes(k);
+    });
+    console.log(isFieldValid);
+    if (!isFieldValid) {
+      throw new Error("not a valid type to update");
     }
-})
+    if (data?.skills?.length > 10) {
+      throw new Error("you can not add more than 10 skills");
+    }
+    await User.findByIdAndUpdate({ _id: userId }, data, {
+      runValidators: true,
+    });
+    res.send("item updated");
+  } catch (err) {
+    res.status(400).send(err.message);
+  }
+});
 
 // const {auth} = require("./auth.js")
 // app.use("/login",(req,res)=>{
