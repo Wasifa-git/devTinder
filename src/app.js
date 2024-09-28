@@ -1,6 +1,6 @@
 const express = require("express");
 const {dbConnect}=require("./config/database");
-const User = require("./models/user")
+const User = require("./models/user");
 const app = express();
 dbConnect().then(()=>{
     console.log("db is connected ");
@@ -27,7 +27,7 @@ app.post("/signup", async(req,res)=>{
         await user.save();
         res.send("data saved successfully");
     }catch(err){
-        res.status(500).send("data not fetched",err.message);
+        res.status(500).send(err.message);
     };
     
 });
@@ -56,15 +56,27 @@ app.delete("/user",async(req,res)=>{
 }) 
 
 //update API - update /user-update an user
-app.patch("/user",async(req,res)=>{
-    const userId = req.body._id;
-    const data = req.body;
-    console.log(userId);
+app.patch("/user/:_id",async(req,res)=>{
+    const userId = req.params._id;
+    const data = req.body;    
     try{
-        await User.findByIdAndUpdate({_id:userId},data);
+        const validColumns = [
+            "userId","lastName","password","skills","about","photoURL",
+        ];
+        const isFieldValid = Object.keys(data).every((k)=>{
+            return validColumns.includes(k);
+        });
+        console.log(isFieldValid);
+        if (! isFieldValid){
+            throw new Error("not a valid type to update");
+        }
+        if(data?.skills?.length > 10) {
+            throw new Error("you can not add more than 10 skills");
+        }
+        await User.findByIdAndUpdate({_id:userId},data,{runValidators:true,});
         res.send("item updated");
     }catch(err) {
-        res.status(400).send("something went wrong");
+        res.status(400).send(err.message);
     }
 })
 
