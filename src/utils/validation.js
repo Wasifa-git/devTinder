@@ -8,5 +8,20 @@ const validateSignupData = (req)=>{
     }else if(!validator.isStrongPassword(password)) {
         throw new Error("Password is not strong");
     }
+};
+const validateEditProfileData = (req)=>{
+    const data = req.body;
+    const validColumns = [
+        "userId",
+        "lastName",
+        "password",
+        "skills",
+        "about",
+        "photoURL",
+      ];
+      const isValid = Object.keys(data).every((k)=>{
+          return validColumns.includes(k);
+      });
+      return isValid;
 }
-module.exports={validateSignupData};
+module.exports={validateSignupData,validateEditProfileData};

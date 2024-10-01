@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const userSchema = mongoose.Schema({
     firstName:{
         type:String,
@@ -59,4 +61,15 @@ const userSchema = mongoose.Schema({
         type:[String]
     }
 },{timestamps:true});
+userSchema.methods.getJWT = async function() {
+    const user = this; // this keyword doesnt work inside arrow function
+    //JWT token creation
+    const token = await jwt.sign({ _id: user._id }, "wasifa360");
+    return token;
+};
+userSchema.methods.validatePassword= async function(passwordinput) {
+    const user = this;
+    const pass = await bcrypt.compare(passwordinput, user.password);
+    return pass;
+}
 module.exports=mongoose.model("User",userSchema);

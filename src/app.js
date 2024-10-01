@@ -1,11 +1,10 @@
 const express = require("express");
 const { dbConnect } = require("./config/database");
 const User = require("./models/user");
-const { validateSignupData } = require("./utils/validation");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const cookie = require("cookie");
 const cookieparser = require("cookie-parser");
+const authRoute = require("./routes/auth");
+const profileRoute=require("./routes/profile");
+const requestRoute=require("./routes/request");
 const app = express();
 dbConnect()
   .then(() => {
@@ -19,76 +18,13 @@ dbConnect()
   });
 app.use(express.json());
 app.use(cookieparser());
-app.post("/signup", async (req, res) => {
-  // const userMock ={
-  //     "firstName":"Anik",
-  //     "lastName":"Barui",
-  //     "email":"Anik@gmail.com",
-  //     "password":"anik123"
-  // };
 
-  try {
-    //validation of data
-    validateSignupData(req);
-    const { firstName, lastName, email, password } = req.body;
-    //const userMock = req.body;
-    //Encrypt the password
-    const passHash = await bcrypt.hash(password, 10);
-    const user = new User({
-      firstName,
-      lastName,
-      email,
-      password: passHash,
-    });
-    await user.save();
-    res.send("data saved successfully");
-  } catch (err) {
-    res.status(500).send("ERROR:" + err.message);
-  }
-});
-// Login API- POST /login - to login in the account
-app.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email: email });
-    if (!user) {
-      throw new Error("Invalid credentials");
-    }
-    const pass = await bcrypt.compare(password, user.password);
-    if (!pass) {
-      throw new Error("Invalid credentials");
-    } else {
-      //JWT token creation
-      const token = await jwt.sign({ _id: user._id }, "wasifa360");
-      //place token inside cookie
-      res.cookie("token", token);
-      res.status(200).send("Login successfully");
-    }
-  } catch (err) {
-    res.status(500).send("ERROR:" + err.message);
-  }
-});
-// Profile API - GET/profile - to get your profile
-app.get("/profile", async (req, res) => {
-  try {
-    //get tokens
-    const cookie = req.cookies;
-    const { token } = cookie;
-    if(! token) {
-        throw new Error("Invalid token");
-    }
-    //validate JWT tokens
-    const dcodedMessage = await jwt.verify(token, "wasifa360");
-    console.log("msg",dcodedMessage);
-    const {_id} = dcodedMessage;
-    console.log("id",_id);
-    const data = await User.findById({_id:_id});
-    console.log(data);
-    res.send(data);
-  } catch (err) {
-    res.status(404).send("not found");
-  }
-});
+app.use("/",authRoute);
+app.use("/",profileRoute);
+app.use("/",requestRoute);
+
+
+
 // Feed API - GET /feed - to get all the users to the feed
 
 app.get("/feed", async (req, res) => {
