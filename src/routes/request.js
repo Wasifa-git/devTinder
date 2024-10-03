@@ -44,6 +44,45 @@ requestRoute.post("/request/send/:status/:toUserId",userAuth,async(req,res)=>{
         }catch(err) {
                 res.status(400).send("ERROR:"+err.message);
         }
-})
+});
+
+requestRoute.post(
+        "/request/review/:status/:requestId",
+        userAuth,
+        async(req,res)=>{
+                //do proper validation
+        try {
+                const loggedUser = req.user;
+        const {status,requestId} = req.params;
+        const allowedStatus =["accepted","rejected"];
+        //validate status
+        if(! allowedStatus.includes(status)) {
+                return res.status(400).json({
+                        message:"status not valid"
+                })
+        }
+        const checkConnection = await ConnectionRequest.findOne({
+                _id:requestId,
+                toUserId:loggedUser._id,
+                status:"interested"
+        })
+        if(! checkConnection) {
+                return res.status(400).json({
+                        message:"connection not valid"
+                })
+        }
+        checkConnection.status = status;
+        const data = await checkConnection.save();
+        res.status(200).json({
+                message:`conn req ${ status} successfully`,
+                data
+        })
+
+        }catch(err) {
+                res.status(400).send("ERROR:"+err.message);
+        }
+        
+        }
+);
 
 module.exports=requestRoute;
